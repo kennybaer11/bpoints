@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+cache/
+*.log
+bt_*.csv
+.claude/
+lines.txt
