@@ -32,7 +32,7 @@ import psycopg
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-from bpoints import names
+from bpoints import db, names
 from bpoints.model import State, implied_centre, p_over, p_overtime, spreads
 
 log = logging.getLogger("price")
@@ -171,7 +171,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     load_dotenv()
     shown = []
-    with psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row) as conn, conn.cursor() as cur:
+    with db.open_conn(row_factory=dict_row) as conn, conn.cursor() as cur:
         cur.execute("""SELECT * FROM bpoints.bk_event WHERE kickoff > now() AND our_league IS NOT NULL
                         ORDER BY our_league, kickoff""")
         events = cur.fetchall()

@@ -9,6 +9,7 @@ A finished season is cached on disk; the current one is read again each run.
 
 import json
 import logging
+import time
 from datetime import date, datetime
 from pathlib import Path
 
@@ -36,7 +37,15 @@ def _season_games(code: str, year: int) -> list[dict]:
     path = CACHE / f"{code}{year}.json"
     if year < current_season() and path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    r = _s.get(f"{BASE}/{code}/seasons/{code}{year}/games", timeout=60)
+    for attempt in range(7):          # through this PC's DNS drops, as in espn.py
+        try:
+            r = _s.get(f"{BASE}/{code}/seasons/{code}{year}/games", timeout=60)
+            break
+        except requests.ConnectionError:
+            if attempt == 6:
+                raise
+            log.warning("%s%d: connection failed - retrying", code, year)
+            time.sleep(min(5 * 2 ** attempt, 40))
     if r.status_code == 404:
         return []
     r.raise_for_status()

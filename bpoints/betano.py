@@ -53,7 +53,17 @@ def _get(path: str) -> dict:
     if wait > 0:
         time.sleep(wait)
     _last = time.monotonic()
-    r = _s.get(BASE + path, timeout=30)
+    # A failed lookup or dropped connection (this PC loses DNS for a minute now
+    # and then) is retried for about two minutes; a refusal is not retried.
+    for attempt in range(7):
+        try:
+            r = _s.get(BASE + path, timeout=30)
+            break
+        except requests.ConnectionError:
+            if attempt == 6:
+                raise
+            log.warning("%s: connection failed - retrying", path)
+            time.sleep(min(5 * 2 ** attempt, 40))
     if r.status_code in (403, 429, 503) or "json" not in r.headers.get("content-type", ""):
         raise Blocked(f"{path}: HTTP {r.status_code}, {r.headers.get('content-type')}")
     r.raise_for_status()

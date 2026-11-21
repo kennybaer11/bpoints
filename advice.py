@@ -31,6 +31,8 @@ from collections import defaultdict
 import psycopg
 from dotenv import load_dotenv
 
+from bpoints import db
+
 EDGE = 0.06
 MIN_ODDS, MAX_ODDS = 1.40, 3.50
 BLEND = 0.75
@@ -70,7 +72,7 @@ CANDIDATES = """
 def main():
     load_dotenv()
     version = code_version()
-    with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
+    with db.open_conn() as conn, conn.cursor() as cur:
         cur.execute(CANDIDATES, (PERIODS, LEAGUES))
         best, events = {}, {}
         for (bk, ev, kickoff, league, t1, t2, market, period, team, side, line, price,

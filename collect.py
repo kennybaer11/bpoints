@@ -42,35 +42,46 @@ def main():
     today = date.today()
     if args.lines:
         return backfill_lines(conn, [lg for lg in args.leagues.split(",") if lg in espn.LEAGUES])
+    failed = []
     for league in args.leagues.split(","):
-        if league in euroleague.LEAGUES:
-            cur = euroleague.current_season()
-            first = HISTORY[league] if args.history else cur
-            if args.start:
-                first = args.start.year if args.start.month >= 8 else args.start.year - 1
-            for year in range(first, cur + 1):
-                out = list(euroleague.games(league, year))
-                db.save_games(conn, [g for g, _ in out], [t for _, ts in out for t in ts])
-                log.info("%s %d-%02d: %d games, %d final", league, year, (year + 1) % 100,
-                         len(out), sum(g["status"] == "final" for g, _ in out))
-            continue
-        start = args.start or (HISTORY[league] if args.history else today - timedelta(days=5))
-        end = args.end or today + timedelta(days=7)
-        day = start
-        while day <= end:
-            chunk_end = min(end, day + timedelta(days=13))
-            if any(d.month in SEASON_MONTHS[league]
-                   for d in (day, chunk_end, day + (chunk_end - day) / 2)):
-                games, teams = [], []
-                for g, ts in espn.games(league, day, chunk_end):
-                    games.append(g)
-                    teams += ts
-                db.save_games(conn, games, teams)
-                log.info("%s %s..%s: %d games, %d final, %d with a closing total", league, day,
-                         chunk_end, len(games), sum(g["status"] == "final" for g in games),
-                         sum(g.get("close_total") is not None for g in games))
-            day = chunk_end + timedelta(days=1)
-    return 0
+        try:
+            collect_league(conn, league, args, today)
+        except Exception as e:            # one feed down must not stop the others
+            conn.rollback()
+            log.error("%s: %s - skipped this run", league, e)
+            failed.append(league)
+    return 1 if failed else 0
+
+
+def collect_league(conn, league, args, today):
+    if league in euroleague.LEAGUES:
+        cur = euroleague.current_season()
+        first = HISTORY[league] if args.history else cur
+        if args.start:
+            first = args.start.year if args.start.month >= 8 else args.start.year - 1
+        for year in range(first, cur + 1):
+            out = list(euroleague.games(league, year))
+            db.save_games(conn, [g for g, _ in out], [t for _, ts in out for t in ts])
+            log.info("%s %d-%02d: %d games, %d final", league, year, (year + 1) % 100,
+                     len(out), sum(g["status"] == "final" for g, _ in out))
+        return
+    start = args.start or (HISTORY[league] if args.history else today - timedelta(days=5))
+    end = args.end or today + timedelta(days=7)
+    day = start
+    while day <= end:
+        chunk_end = min(end, day + timedelta(days=13))
+        if any(d.month in SEASON_MONTHS[league]
+               for d in (day, chunk_end, day + (chunk_end - day) / 2)):
+            games, teams = [], []
+            for g, ts in espn.games(league, day, chunk_end):
+                games.append(g)
+                teams += ts
+            db.save_games(conn, games, teams)
+            log.info("%s %s..%s: %d games, %d final, %d with a closing total", league, day,
+                     chunk_end, len(games), sum(g["status"] == "final" for g in games),
+                     sum(g.get("close_total") is not None for g in games))
+        day = chunk_end + timedelta(days=1)
+return 0
 
 
 def backfill_lines(conn, leagues):

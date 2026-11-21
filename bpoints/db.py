@@ -1,6 +1,7 @@
 """Postgres writes. Every table is in the `bpoints` schema."""
 
 import os
+import time
 from pathlib import Path
 
 import psycopg
@@ -8,8 +9,20 @@ import psycopg
 SCHEMA = Path(__file__).resolve().parent.parent / "schema.sql"
 
 
+def open_conn(**kw):
+    """psycopg.connect, retried for about two minutes: the owner's PC drops
+    DNS lookups for a minute now and then."""
+    for attempt in range(7):
+        try:
+            return psycopg.connect(os.environ["DATABASE_URL"], **kw)
+        except psycopg.OperationalError:
+            if attempt == 6:
+                raise
+            time.sleep(min(5 * 2 ** attempt, 40))
+
+
 def connect():
-    conn = psycopg.connect(os.environ["DATABASE_URL"], autocommit=False)
+    conn = open_conn(autocommit=False)
     with conn.cursor() as cur:
         cur.execute(SCHEMA.read_text(encoding="utf-8"))
     conn.commit()
