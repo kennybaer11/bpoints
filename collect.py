@@ -81,7 +81,6 @@ def collect_league(conn, league, args, today):
                      chunk_end, len(games), sum(g["status"] == "final" for g in games),
                      sum(g.get("close_total") is not None for g in games))
         day = chunk_end + timedelta(days=1)
-return 0
 
 
 def backfill_lines(conn, leagues):
