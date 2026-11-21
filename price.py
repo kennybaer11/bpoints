@@ -41,12 +41,12 @@ log = logging.getLogger("price")
 # 0 = Betano's centre, 1 = the model's. From backtest.py's slope of
 # (total - close) on (model - close) against DraftKings' closing totals, a
 # little under it for safety; leagues without closing lines get a small one.
-W = {"nba": 0.0, "wnba": 0.15, "ncaam": 0.25, "ncaaw": 0.25, "euroleague": 0.15,
+W = {"nba": 0.0, "wnba": 0.0, "ncaam": 0.10, "ncaaw": 0.25, "euroleague": 0.15,
      "eurocup": 0.15}
 # A first half's spread as a share of the whole game's: NBA 11.9 / 17.8 around
 # the close (calibrate.py), a little under the sqrt(1/2) that halving the
 # scoring alone would give - the end of a game adds variance (fouling, garbage time).
-H1_SD = {"nba": 0.67}
+H1_SD = {"nba": 0.67, "ncaam": 0.60, "wnba": 0.60}
 H1_SHARE = {"nba": 0.505, "wnba": 0.50, "ncaam": 0.475, "ncaaw": 0.49, "euroleague": 0.50,
             "eurocup": 0.50}
 
@@ -65,7 +65,8 @@ def replay(cur, league: str) -> State:
 
 
 def h1_share(cur, league: str) -> float:
-    cur.execute("""SELECT sum(home_h1 + away_h1)::float / nullif(sum(home_reg + away_reg), 0) AS s,
+    # Of the full-game points, overtime included: it is applied to the full-game centre.
+    cur.execute("""SELECT sum(home_h1 + away_h1)::float / nullif(sum(home_pts + away_pts), 0) AS s,
                           count(*) AS n
                      FROM bpoints.game WHERE league = %s AND status = 'final' AND home_h1 IS NOT NULL
                       AND tipoff > now() - interval '2 years'""", (league,))

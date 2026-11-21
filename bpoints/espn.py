@@ -37,7 +37,10 @@ def _get(url: str, keep: bool) -> dict:
     path = CACHE / "espn" / (hashlib.sha1(url.encode()).hexdigest() + ".json")
     if keep and path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    for attempt in range(4):
+    # This PC's DNS drops lookups now and then for a minute: retry for about
+    # two minutes, then give up on this one request (the caller skips it, and
+    # the next run fetches it again - nothing failed is cached).
+    for attempt in range(7):
         try:
             r = _s.get(url, timeout=30)
             if r.status_code == 404:
@@ -46,10 +49,11 @@ def _get(url: str, keep: bool) -> dict:
             body = r.json()
             break
         except (requests.RequestException, ValueError) as e:
-            if attempt == 3:
-                raise
-            log.warning("%s: %s - retrying", url, e)
-            time.sleep(2 + 4 * attempt)
+            if attempt == 6:
+                log.error("%s: %s - skipped", url, e)
+                return {}
+            log.warning("%s: %s - retrying", url, type(e).__name__)
+            time.sleep(min(5 * 2 ** attempt, 40))
     if keep:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(body), encoding="utf-8")

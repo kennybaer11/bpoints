@@ -37,7 +37,7 @@ BLEND = 0.75
 PERIODS = ["ft", "h1"]
 # Only where the centre is DraftKings' line: the European leagues have no sharper
 # reference, and their lines are priced and settled (the admin page) but not tipped.
-LEAGUES = ["nba"]           # ncaam, wnba, ncaaw once their spreads are calibrated
+LEAGUES = ["nba", "ncaam", "wnba"]   # ncaaw once its spread is calibrated
 
 
 def code_version():

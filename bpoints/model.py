@@ -39,11 +39,12 @@ class Params:
     reg_periods: int = 4
 
 
-# Tuned on 2024-2026 walk-forward (backtest.py --tune); see README.
+# Spreads (c_team, rho) from calibrate.py: results around DraftKings' closing
+# line, 2023-2026 (NBA), 2024-2026 (NCAA, WNBA). The others are guesses.
 LEAGUE_PARAMS = {
     "nba":        Params(k=0.030, carry=0.75, c_team=1.058, rho=0.25, ot_points=21.5),
-    "wnba":       Params(k=0.035, carry=0.70, c_team=1.10, rho=0.15, ot_points=17.5),
-    "ncaam":      Params(k=0.045, carry=0.55, c_team=1.10, rho=0.05, ot_points=15.5, reg_periods=2),
+    "wnba":       Params(k=0.035, carry=0.70, c_team=1.203, rho=0.37, ot_points=17.5),
+    "ncaam":      Params(k=0.045, carry=0.55, c_team=1.168, rho=0.37, ot_points=15.5, reg_periods=2),
     "ncaaw":      Params(k=0.045, carry=0.55, c_team=1.15, rho=0.05, ot_points=14.0),
     "euroleague": Params(k=0.035, carry=0.65, c_team=1.05, rho=0.10, ot_points=17.5),
     "eurocup":    Params(k=0.040, carry=0.60, c_team=1.05, rho=0.10, ot_points=17.5),
