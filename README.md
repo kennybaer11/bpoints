@@ -110,9 +110,23 @@ lands exactly is void.
 Chance (chance.cz) has the same points markets as Betano - total and each
 team's points including overtime, and first-half points, each a ladder - but
 turns away anything that is not a browser (Cloudflare and its own bot check,
-HTTP 403). Its lines are scraped by hand in Chrome with the webscraper.io
-extension and `chance_sitemap.json` (DevTools -> Web Scraper -> Create new
-sitemap -> Import sitemap -> Scrape), exported as CSV and read in:
+HTTP 403). webscraper.io's Cloud browser gets through, as it does for
+posession's football and tennis odds, so `chance_pipeline.py` reads Chance in
+two jobs: the tipped leagues' pages (NBA, NCAA men), then only the games that
+pair with ours tipping off in the next 12 hours - a credit a page, about 35 a
+run, from the account posession shares (it stops at 500 left). The Cloud
+browser runs nine hours behind Prague, so Chance's own times are never read:
+a game's tip-off is the results feed's. The server runs it at 15:00 and 21:00.
+
+```bash
+python chance_pipeline.py --dry-run      # which games, no credits
+python chance_pipeline.py --links-only   # stage 1 and the pick (2 credits)
+python chance_pipeline.py                # both stages, store the lines
+```
+
+By hand, in Chrome with the webscraper.io extension and `chance_sitemap.json`
+(DevTools -> Web Scraper -> Create new sitemap -> Import sitemap -> Scrape),
+exported as CSV and read in:
 
 ```bash
 python chance_import.py chance.csv --dry-run   # what would be stored
@@ -123,14 +137,15 @@ python price.py --store && python advice.py && python notify.py
 Chance shows a game's time as "Dnes | 21:40" or "Zítra | 0:10" - when betting
 closes, ten minutes after tip-off - so it is read against the time of the
 scrape (the file's, or `--scraped-at`). The lines are only as fresh as that
-scrape: `advice.py` stops tipping them three hours after it (`MAX_AGE`). A game
+scrape: `advice.py` stops tipping them six hours after it (`MAX_AGE`). A game
 priced at both bookmakers still gets one tip per period, at whichever has the
 better edge.
 
 ## On the server
 
-`deploy/run_bpoints.sh` in the posession repo runs every two hours: collect,
-settle, price, advice, notify. **Betano refuses the server** (HTTP 403), so
+`deploy/run_bpoints.sh` in the posession repo runs every three hours: collect,
+settle, price, advice, notify - and at 15:00 and 21:00 Chance's lines first
+(`run_bpoints.sh chance`). **Betano refuses the server** (HTTP 403), so
 its lines come from the owner's PC, like the tennis and CS2 lines:
 
 ```powershell

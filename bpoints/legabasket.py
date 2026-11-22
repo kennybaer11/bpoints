@@ -34,7 +34,7 @@ FINAL = "2"                          # game_status: "0" scheduled, "2" final
 
 # What Betano calls a club when that is not a part of Lega Basket's name
 # (names.py compares a bookmaker's name with every name a team has).
-BETANO_NAME: dict[str, str] = {}
+BETANO_NAME: dict[str, str] = {"UDI": "AP Udine", "TRN": "Trento"}
 
 _s = requests.Session()
 _s.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

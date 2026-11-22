@@ -61,10 +61,10 @@ def stake(p: float, odds: float) -> int:
     return max(1, min(10, round(quarter * 100)))
 
 
-# Lines read from a scrape the owner runs by hand (chance_import.py) are only as
+# Lines from a scrape (chance_pipeline.py twice a day, or chance_import.py) are only as
 # fresh as that scrape: older than this, they are not tipped (and a tip on them
 # is withdrawn). Betano's are read on every run, so they have no limit here.
-MAX_AGE = {"chance": "3 hours"}
+MAX_AGE = {"chance": "6 hours"}   # scraped at 15:00 and 21:00: covers each evening
 
 CANDIDATES = """
     SELECT p.bookmaker, p.event_id, e.kickoff, e.league, e.team1, e.team2,
@@ -83,6 +83,13 @@ def main():
     load_dotenv()
     version = code_version()
     with db.open_conn() as conn, conn.cursor() as cur:
+        # A placed tip is locked, and its game and period are taken: another
+        # bookmaker's line there would be the same bet a second time.
+        cur.execute("""SELECT coalesce(e.our_league || ':' || e.game_id, a.bookmaker || ':' || a.event_id),
+                              a.period
+                         FROM bpoints.advice a JOIN bpoints.bk_event e USING (bookmaker, event_id)
+                        WHERE a.placed AND a.backed AND a.kickoff > now()""")
+        placed = set(cur.fetchall())
         cur.execute(CANDIDATES, (PERIODS, LEAGUES, json.dumps(MAX_AGE)))
         best, events = {}, {}
         for (bk, ev, kickoff, league, t1, t2, game, market, period, team, side, line, price,
@@ -99,6 +106,8 @@ def main():
             # and the same bet at another bookmaker is still the same bet, so the
             # game is the results feed's (Betano and Chance both pair to it).
             k = (game, period)
+            if k in placed:
+                continue
             if k not in best or edge > best[k]["edge"]:
                 best[k] = {"bk": bk, "ev": ev, "market": market, "period": period, "team": team,
                            "side": side, "line": line, "odds": price, "p": p, "p_raw": p_raw,

@@ -90,18 +90,50 @@ def price(text: str) -> float | None:
     return p if p > 1 else None
 
 
+def match_id(url: str) -> str | None:
+    """Chance's match id from a game's link (/kurzy/zapas/basketbal-x-y/8523606[/co-se-sazi])."""
+    m = re.search(r"/kurzy/zapas/[^/]+/(\d+)", url or "")
+    return m.group(1) if m else None
+
+
+def market_lines(records, team1: str, team2: str, skipped: Counter | None = None) -> list[dict]:
+    """One game's scraped rows (from the CSV or a webscraper.io job, the same
+    columns) -> odds rows. team1 is the home team, as Chance names it."""
+    out = {}
+    for r in records:
+        for col, (market, period) in MARKETS.items():
+            if not r.get(f"{col}_under") and not r.get(f"{col}_over"):
+                continue
+            team = 0
+            if market == "team_total":
+                who = (r.get(f"{col}_team") or "").strip()
+                s1, s2 = names.similarity(who, team1), names.similarity(who, team2)
+                if max(s1, s2) < 0.75 or s1 == s2:
+                    if skipped is not None:
+                        skipped["team not known"] += 1
+                    continue
+                team = 1 if s1 > s2 else 2
+            for side_col in ("under", "over"):
+                sel, p = selection(r.get(f"{col}_{side_col}")), price(r.get(f"{col}_{side_col}_odds"))
+                if not sel or not p:
+                    continue
+                side, line = sel
+                out[(market, period, team, side, line)] = p
+    return [{"market": k[0], "period": k[1], "team": k[2], "side": k[3], "line": k[4], "price": p}
+            for k, p in out.items()]
+
+
 def read(path: Path, scraped: datetime):
     """(event, odds rows) per game in the CSV."""
-    events, rows = {}, defaultdict(dict)
+    events, records = {}, defaultdict(list)
     skipped = Counter()
     with path.open(encoding="utf-8-sig", newline="") as f:
         for r in csv.DictReader(f):
             href = r.get("game-href") or ""
-            m = re.search(r"/(\d+)(?:/[^/]*)?/?$", href)
-            if not m or not r.get("home") or not r.get("away"):
+            ev = match_id(href)
+            if not ev or not r.get("home") or not r.get("away"):
                 skipped["no game"] += 1
                 continue
-            ev = m.group(1)
             if ev not in events:
                 ko = kickoff(r.get("when") or "", scraped)
                 if ko is None:
@@ -111,29 +143,11 @@ def read(path: Path, scraped: datetime):
                 events[ev] = {"event_id": ev, "kickoff": ko, "league": comp,
                               "our_league": our_league(comp), "team1": r["home"].strip(),
                               "team2": r["away"].strip(), "url": href}
-            e = events[ev]
-            for col, (market, period) in MARKETS.items():
-                if not r.get(f"{col}_under") and not r.get(f"{col}_over"):
-                    continue
-                team = 0
-                if market == "team_total":
-                    who = (r.get(f"{col}_team") or "").strip()
-                    s1, s2 = names.similarity(who, e["team1"]), names.similarity(who, e["team2"])
-                    if max(s1, s2) < 0.75 or s1 == s2:
-                        skipped["team not known"] += 1
-                        continue
-                    team = 1 if s1 > s2 else 2
-                for side_col in ("under", "over"):
-                    sel, p = selection(r.get(f"{col}_{side_col}")), price(r.get(f"{col}_{side_col}_odds"))
-                    if not sel or not p:
-                        continue
-                    side, line = sel
-                    rows[ev][(market, period, team, side, line)] = p
+            records[ev].append(r)
+    out = [(e, market_lines(records[ev], e["team1"], e["team2"], skipped)) for ev, e in events.items()]
     for k, n in skipped.items():
         log.info("%d rows skipped: %s", n, k)
-    for ev, e in events.items():
-        yield e, [{"market": k[0], "period": k[1], "team": k[2], "side": k[3], "line": k[4],
-                   "price": p} for k, p in rows[ev].items()]
+    yield from out
 
 
 def main():
@@ -160,22 +174,31 @@ def main():
             print(f"{e['kickoff']:%d.%m %H:%M}  {e['team1']} - {e['team2']}  [{e['league']} -> "
                   f"{e['our_league']}]  {dict(mk)}")
         return 0
+    store(games, scraped)
+    return 0
+
+
+def store(games, scraped: datetime):
+    """Write (event, odds rows) pairs, the lines stamped with the scrape's time."""
     from bpoints import db
     conn = db.connect()
-    for e, rows in games:
-        if not rows:
-            continue
-        db.save_odds(conn, BOOKMAKER, e, rows)
-        # The lines are as fresh as the scrape, not the import.
-        with conn.cursor() as cur:
-            cur.execute("UPDATE bpoints.bk_event SET last_seen = %s WHERE (bookmaker, event_id) = (%s, %s)",
-                        (scraped, BOOKMAKER, e["event_id"]))
-            cur.execute("""UPDATE bpoints.odds SET last_seen = %s
-                            WHERE (bookmaker, event_id) = (%s, %s) AND last_seen >= now() - interval '1 minute'""",
-                        (scraped, BOOKMAKER, e["event_id"]))
-        conn.commit()
-    log.info("stored")
-    return 0
+    try:
+        for e, rows in games:
+            if not rows:
+                continue
+            db.save_odds(conn, BOOKMAKER, e, rows)
+            # The lines are as fresh as the scrape, not the import.
+            with conn.cursor() as cur:
+                cur.execute("UPDATE bpoints.bk_event SET last_seen = %s WHERE (bookmaker, event_id) = (%s, %s)",
+                            (scraped, BOOKMAKER, e["event_id"]))
+                cur.execute("""UPDATE bpoints.odds SET last_seen = %s
+                                WHERE (bookmaker, event_id) = (%s, %s)
+                                  AND last_seen >= now() - interval '1 minute'""",
+                            (scraped, BOOKMAKER, e["event_id"]))
+            conn.commit()
+    finally:
+        conn.close()
+    log.info("%d games stored", sum(1 for _, r in games if r))
 
 
 if __name__ == "__main__":
