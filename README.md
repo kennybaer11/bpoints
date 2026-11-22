@@ -105,6 +105,28 @@ rewritten until its game starts and locked by the database from then on.
 Totals include overtime, as Betano settles them; a whole-number line that
 lands exactly is void.
 
+## Chance
+
+Chance (chance.cz) has the same points markets as Betano - total and each
+team's points including overtime, and first-half points, each a ladder - but
+turns away anything that is not a browser (Cloudflare and its own bot check,
+HTTP 403). Its lines are scraped by hand in Chrome with the webscraper.io
+extension and `chance_sitemap.json` (DevTools -> Web Scraper -> Create new
+sitemap -> Import sitemap -> Scrape), exported as CSV and read in:
+
+```bash
+python chance_import.py chance.csv --dry-run   # what would be stored
+python chance_import.py chance.csv             # -> bpoints.odds (bookmaker 'chance')
+python price.py --store && python advice.py && python notify.py
+```
+
+Chance shows a game's time as "Dnes | 21:40" or "Zítra | 0:10" - when betting
+closes, ten minutes after tip-off - so it is read against the time of the
+scrape (the file's, or `--scraped-at`). The lines are only as fresh as that
+scrape: `advice.py` stops tipping them three hours after it (`MAX_AGE`). A game
+priced at both bookmakers still gets one tip per period, at whichever has the
+better edge.
+
 ## On the server
 
 `deploy/run_bpoints.sh` in the posession repo runs every two hours: collect,

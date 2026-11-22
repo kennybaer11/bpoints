@@ -13,8 +13,9 @@ The rules, as for the tennis and CS2 tips:
   - a tip needs EDGE (+6%) on that blended chance, odds between MIN_ODDS and
     MAX_ODDS, and a price on both sides of the line (to take the margin out);
   - at most one tip per game and period (whole game, first half): the line
-    with the best blended edge among the total and both teams' points - a
-    ladder's lines, and a total and its team totals, are one bet many times;
+    with the best blended edge among the total and both teams' points, at
+    whichever bookmaker (Betano, Chance) has it - a ladder's lines, a total
+    and its team totals, and the same line at two bookmakers are one bet;
   - stake: quarter Kelly on the chance blended half and half with the
     bookmaker's, scaled down above odds of 3.0, 1-10 tenths of a unit, and the
     tips on one game share the largest single stake between them.
@@ -23,6 +24,7 @@ Until tip-off a tip is rewritten each run, and one no longer advised is kept
 with backed = false (withdrawn). From tip-off the database refuses changes.
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -59,23 +61,31 @@ def stake(p: float, odds: float) -> int:
     return max(1, min(10, round(quarter * 100)))
 
 
+# Lines read from a scrape the owner runs by hand (chance_import.py) are only as
+# fresh as that scrape: older than this, they are not tipped (and a tip on them
+# is withdrawn). Betano's are read on every run, so they have no limit here.
+MAX_AGE = {"chance": "3 hours"}
+
 CANDIDATES = """
     SELECT p.bookmaker, p.event_id, e.kickoff, e.league, e.team1, e.team2,
+           coalesce(e.our_league || ':' || e.game_id, p.bookmaker || ':' || p.event_id),
            p.market, p.period, p.team, p.side, p.line::float, p.price::float,
            p.p_model::float, p.p_book::float
       FROM bpoints.priced p
       JOIN bpoints.bk_event e USING (bookmaker, event_id)
      WHERE e.kickoff > now() AND p.period = ANY(%s) AND e.our_league = ANY(%s)
-       AND p.p_book IS NOT NULL AND p.centre_from = 'draftkings'"""
+       AND p.p_book IS NOT NULL AND p.centre_from = 'draftkings'
+       AND NOT EXISTS (SELECT 1 FROM jsonb_each_text(%s::jsonb) a
+                        WHERE a.key = e.bookmaker AND e.last_seen < now() - a.value::interval)"""
 
 
 def main():
     load_dotenv()
     version = code_version()
     with db.open_conn() as conn, conn.cursor() as cur:
-        cur.execute(CANDIDATES, (PERIODS, LEAGUES))
+        cur.execute(CANDIDATES, (PERIODS, LEAGUES, json.dumps(MAX_AGE)))
         best, events = {}, {}
-        for (bk, ev, kickoff, league, t1, t2, market, period, team, side, line, price,
+        for (bk, ev, kickoff, league, t1, t2, game, market, period, team, side, line, price,
              p_raw, p_book) in cur.fetchall():
             events[(bk, ev)] = (kickoff, league, t1, t2)
             if not (MIN_ODDS <= price <= MAX_ODDS):
@@ -85,22 +95,26 @@ def main():
             if edge < EDGE:
                 continue
             # One tip per game and period: the total and the two teams' points
-            # move together (a fast game lifts all three), so they are one bet.
-            k = (bk, ev, period)
+            # move together (a fast game lifts all three), so they are one bet -
+            # and the same bet at another bookmaker is still the same bet, so the
+            # game is the results feed's (Betano and Chance both pair to it).
+            k = (game, period)
             if k not in best or edge > best[k]["edge"]:
-                best[k] = {"market": market, "period": period, "team": team, "side": side,
-                           "line": line, "odds": price, "p": p, "p_raw": p_raw, "edge": edge}
+                best[k] = {"bk": bk, "ev": ev, "market": market, "period": period, "team": team,
+                           "side": side, "line": line, "odds": price, "p": p, "p_raw": p_raw,
+                           "edge": edge}
 
         by_match = defaultdict(list)
         for k, t in best.items():
             t["own"] = stake(t["p"], t["odds"])
-            by_match[k[:2]].append(t)
+            by_match[k[0]].append(t)
         for tips in by_match.values():
             budget, want = max(t["own"] for t in tips), sum(t["own"] for t in tips)
             for t in tips:
                 t["rating"] = max(1, round(t["own"] * budget / want))
 
-        for (bk, ev, slot), t in best.items():
+        for t in best.values():
+            bk, ev, slot = t["bk"], t["ev"], t["period"]
             kickoff, league, t1, t2 = events[(bk, ev)]
             cur.execute("""
                 INSERT INTO bpoints.advice (bookmaker, event_id, slot, kickoff, league, team1, team2,
@@ -118,7 +132,7 @@ def main():
                          t["team"], t["side"], t["line"], t["odds"], t["p"], t["p_raw"],
                          t["edge"], t["rating"], version))
 
-        keep = [f"{bk}|{ev}|{slot}" for bk, ev, slot in best]
+        keep = [f"{t['bk']}|{t['ev']}|{t['period']}" for t in best.values()]
         cur.execute("""
             UPDATE bpoints.advice SET backed = false, advised_at = now()
              WHERE backed AND kickoff > now() AND NOT placed

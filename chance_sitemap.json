@@ -1,0 +1,189 @@
+{
+  "_id": "chance-basketball-points",
+  "startUrl": ["https://www.chance.cz/kurzy/basketbal-7"],
+  "selectors": [
+    {
+      "id": "games",
+      "parentSelectors": ["_root"],
+      "type": "SelectorElementClick",
+      "selector": "div[class*='Match-styled__Row']",
+      "multiple": true,
+      "clickElementSelector": "button:contains('Zobrazit další zápasy')",
+      "clickType": "clickMore",
+      "discardInitialElements": "do-not-discard",
+      "clickElementUniquenessType": "uniqueCSSSelector",
+      "delay": 2500
+    },
+    {
+      "id": "game",
+      "parentSelectors": ["games"],
+      "type": "SelectorLink",
+      "selector": "a[href*='/kurzy/zapas/basketbal-']",
+      "multiple": false,
+      "linkType": "linkFromHref"
+    },
+    {
+      "id": "home",
+      "parentSelectors": ["game"],
+      "type": "SelectorText",
+      "selector": "div[class*='MatchDetail-styled__Name']:eq(0)",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "away",
+      "parentSelectors": ["game"],
+      "type": "SelectorText",
+      "selector": "div[class*='MatchDetail-styled__Name']:eq(1)",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "when",
+      "parentSelectors": ["game"],
+      "type": "SelectorText",
+      "selector": "div[class*='MatchDetail-styled__Date']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "competition",
+      "parentSelectors": ["game"],
+      "type": "SelectorText",
+      "selector": "div[class*='MatchDetail-styled__TopHeader']",
+      "multiple": false,
+      "regex": ""
+    },
+
+    {
+      "id": "total_ft",
+      "parentSelectors": ["game"],
+      "type": "SelectorElement",
+      "selector": "[data-my-selection-id='7-ASIAN_TOTAL-0'] div[class*='EventTableBox-styled__Row']",
+      "multiple": true,
+      "delay": 2000
+    },
+    {
+      "id": "total_ft_under",
+      "parentSelectors": ["total_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(0) span[class*='BetButton-styled__Name']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "total_ft_under_odds",
+      "parentSelectors": ["total_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(0) > div > span",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "total_ft_over",
+      "parentSelectors": ["total_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(1) span[class*='BetButton-styled__Name']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "total_ft_over_odds",
+      "parentSelectors": ["total_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(1) > div > span",
+      "multiple": false,
+      "regex": ""
+    },
+
+    {
+      "id": "team_ft",
+      "parentSelectors": ["game"],
+      "type": "SelectorElement",
+      "selector": "[data-my-selection-id='7-TOTAL_PARTICIPANT-0'] div[class*='EventTableBox-styled__Row']",
+      "multiple": true,
+      "delay": 0
+    },
+    {
+      "id": "team_ft_team",
+      "parentSelectors": ["team_ft"],
+      "type": "SelectorText",
+      "selector": "div.truncate",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "team_ft_under",
+      "parentSelectors": ["team_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(0) span[class*='BetButton-styled__Name']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "team_ft_under_odds",
+      "parentSelectors": ["team_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(0) > div > span",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "team_ft_over",
+      "parentSelectors": ["team_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(1) span[class*='BetButton-styled__Name']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "team_ft_over_odds",
+      "parentSelectors": ["team_ft"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(1) > div > span",
+      "multiple": false,
+      "regex": ""
+    },
+
+    {
+      "id": "total_h1",
+      "parentSelectors": ["game"],
+      "type": "SelectorElement",
+      "selector": "[data-my-selection-id='7-ASIAN_TOTAL-2'] div[class*='EventTableBox-styled__Row']",
+      "multiple": true,
+      "delay": 0
+    },
+    {
+      "id": "total_h1_under",
+      "parentSelectors": ["total_h1"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(0) span[class*='BetButton-styled__Name']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "total_h1_under_odds",
+      "parentSelectors": ["total_h1"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(0) > div > span",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "total_h1_over",
+      "parentSelectors": ["total_h1"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(1) span[class*='BetButton-styled__Name']",
+      "multiple": false,
+      "regex": ""
+    },
+    {
+      "id": "total_h1_over_odds",
+      "parentSelectors": ["total_h1"],
+      "type": "SelectorText",
+      "selector": "div[class*='BetButton-styled__BetButton']:eq(1) > div > span",
+      "multiple": false,
+      "regex": ""
+    }
+  ]
+}
