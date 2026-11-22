@@ -5,7 +5,8 @@
     python collect.py --leagues nba,ncaam --start 2025-01-01 --end 2025-03-01
 
 ESPN: NBA, WNBA, NCAA men and women. Euroleague's API: EuroLeague and EuroCup
-(always read a whole season at a time - one request).
+(always read a whole season at a time - one request). ACB's match pages: Liga
+Endesa, one page per game (finished ones are cached, so only the first run is long).
 """
 
 import argparse
@@ -15,16 +16,18 @@ from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
-from bpoints import db, espn, euroleague
+from bpoints import acb, db, espn, euroleague
 
 log = logging.getLogger("collect")
 
 HISTORY = {"nba": date(2023, 10, 1), "wnba": date(2024, 5, 1), "ncaam": date(2024, 11, 1),
-           "ncaaw": date(2024, 11, 1), "euroleague": 2022, "eurocup": 2022}
+           "ncaaw": date(2024, 11, 1), "euroleague": 2022, "eurocup": 2022,
+           "acb": 102800, "nbl": date(2023, 9, 1)}   # for acb: the first match id read (2023-24 onwards), not a year
 # Days with no games in a league are skipped by the scoreboard anyway, but the
 # off-season is a few hundred requests saved.
 SEASON_MONTHS = {"nba": {10, 11, 12, 1, 2, 3, 4, 5, 6}, "wnba": {5, 6, 7, 8, 9, 10},
-                 "ncaam": {11, 12, 1, 2, 3, 4}, "ncaaw": {11, 12, 1, 2, 3, 4}}
+                 "ncaam": {11, 12, 1, 2, 3, 4}, "ncaaw": {11, 12, 1, 2, 3, 4},
+                 "nbl": {9, 10, 11, 12, 1, 2, 3}}
 
 
 def main():
@@ -41,7 +44,9 @@ def main():
     conn = db.connect()
     today = date.today()
     if args.lines:
-        return backfill_lines(conn, [lg for lg in args.leagues.split(",") if lg in espn.LEAGUES])
+        # (the NBL has no DraftKings line to find)
+        return backfill_lines(conn, [lg for lg in args.leagues.split(",")
+                                     if lg in espn.LEAGUES and lg != "nbl"])
     failed = []
     for league in args.leagues.split(","):
         try:
@@ -54,6 +59,32 @@ def main():
 
 
 def collect_league(conn, league, args, today):
+    if league == "acb":
+        first, last = acb.current_block()
+        if args.history:
+            first = HISTORY[league]
+        out, pending = [], []
+
+        def save():
+            # A fresh connection each time: the one opened at the start is
+            # dropped by the server during the long scrape.
+            c = db.connect()
+            try:
+                db.save_games(c, [x for x, _ in pending], [t for _, tt in pending for t in tt])
+            finally:
+                c.close()
+            pending.clear()
+
+        for g, ts in acb.games(first, last):
+            out.append((g, ts))
+            pending.append((g, ts))
+            if len(pending) >= 100:          # a long first run is saved as it goes
+                save()
+        if pending:
+            save()
+        log.info("acb ids %d-%d: %d games, %d final", first, last, len(out),
+                 sum(g["status"] == "final" for g, _ in out))
+        return
     if league in euroleague.LEAGUES:
         cur = euroleague.current_season()
         first = HISTORY[league] if args.history else cur

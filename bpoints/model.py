@@ -48,11 +48,13 @@ LEAGUE_PARAMS = {
     "ncaaw":      Params(k=0.045, carry=0.55, c_team=1.15, rho=0.05, ot_points=14.0),
     "euroleague": Params(k=0.035, carry=0.65, c_team=1.05, rho=0.10, ot_points=17.5),
     "eurocup":    Params(k=0.040, carry=0.60, c_team=1.05, rho=0.10, ot_points=17.5),
+    "acb":        Params(k=0.035, carry=0.65, c_team=1.05, rho=0.10, ot_points=17.5),
+    "nbl":        Params(k=0.040, carry=0.60, c_team=1.05, rho=0.10, ot_points=20.0),
 }
 START_L = {"nba": 114.0, "wnba": 82.0, "ncaam": 72.0, "ncaaw": 65.0, "euroleague": 82.0,
-           "eurocup": 82.0}
+           "eurocup": 82.0, "acb": 88.0, "nbl": 92.0}
 START_H = {"nba": 0.02, "wnba": 0.03, "ncaam": 0.045, "ncaaw": 0.045, "euroleague": 0.045,
-           "eurocup": 0.045}
+           "eurocup": 0.045, "acb": 0.045, "nbl": 0.03}
 
 
 @dataclass

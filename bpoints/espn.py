@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball"
 LEAGUES = {"nba": "nba", "wnba": "wnba", "ncaam": "mens-college-basketball",
-           "ncaaw": "womens-college-basketball"}
+           "ncaaw": "womens-college-basketball", "nbl": "nbl"}   # nbl: Australia
 CACHE = Path(__file__).resolve().parent.parent / "cache"
 
 _s = requests.Session()

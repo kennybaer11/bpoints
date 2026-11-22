@@ -38,17 +38,24 @@ off, at prices near evens. That is what most tips are. Whether enough of it
 is left after Betano's margin is what the settled record (betken.cz) will
 show.
 
-The European leagues (EuroLeague, EuroCup) have no sharper line to centre
+The European leagues (EuroLeague, EuroCup, Liga Endesa) have no sharper line to centre
 on: their lines are priced around Betano's own centre and settled, but not
 tipped.
 
 ## Data
 
-- **ESPN** (`bpoints/espn.py`): NBA, WNBA, NCAA men and women - every game
+- **ESPN** (`bpoints/espn.py`): NBA, WNBA, NCAA men and women and the Australian NBL (no DraftKings line there, so it is priced around Betano's centre and not tipped) - every game
   with the score by period, the box score (possessions) and DraftKings' line
   (the summary's pick centre from 2026-27, ESPN's odds feed before that).
 - **EuroLeague's own API** (`bpoints/euroleague.py`): EuroLeague and EuroCup,
   every game with the score by quarter.
+- **ACB's match pages** (`bpoints/acb.py`): the Liga Endesa, one page per game
+  (`live.acb.com/partidos/x-vs-y-{id}/estadisticas`) with the score by quarter,
+  overtime as a fifth. A season's league games are a contiguous block of ids
+  (2026-27: 105375-105680) in an id space shared with other competitions, so a
+  game counts only when its competitionId is 1. Finished games are cached in
+  `cache/acb/`; `collect.py --history --leagues acb` reads ids from 102800 (2023-24
+  on) and takes about 45 minutes the first time.
 
 ```bash
 pip install -r requirements.txt

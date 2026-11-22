@@ -122,7 +122,7 @@ def tune(df, league, start):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--leagues", default="nba,ncaam,wnba,ncaaw,euroleague,eurocup")
+    ap.add_argument("--leagues", default="nba,ncaam,wnba,ncaaw,euroleague,eurocup,acb,nbl")
     ap.add_argument("--start", type=date.fromisoformat, default=date(2025, 7, 1))
     ap.add_argument("--min-games", type=int, default=5)
     ap.add_argument("--tune")
