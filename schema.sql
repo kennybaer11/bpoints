@@ -5,7 +5,7 @@
 CREATE SCHEMA IF NOT EXISTS bpoints;
 
 -- One row per game, played or scheduled. league: nba, wnba, ncaam, ncaaw
--- (ESPN), euroleague, eurocup (Euroleague's own API), acb (Liga Endesa, ACB's match pages). Points include overtime;
+-- (ESPN), euroleague, eurocup (Euroleague's own API), acb (Liga Endesa, ACB's match pages), lba (Italy's Serie A, Lega Basket's API). Points include overtime;
 -- reg_* are regulation only (overtime is bet on by Betano's totals, but the
 -- model learns from regulation scoring and adds overtime separately).
 CREATE TABLE IF NOT EXISTS bpoints.game (

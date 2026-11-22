@@ -42,13 +42,13 @@ log = logging.getLogger("price")
 # (total - close) on (model - close) against DraftKings' closing totals, a
 # little under it for safety; leagues without closing lines get a small one.
 W = {"nba": 0.0, "wnba": 0.0, "ncaam": 0.10, "ncaaw": 0.25, "euroleague": 0.15,
-     "eurocup": 0.15, "acb": 0.15, "nbl": 0.15}
+     "eurocup": 0.15, "acb": 0.15, "nbl": 0.15, "lba": 0.15}
 # A first half's spread as a share of the whole game's: NBA 11.9 / 17.8 around
 # the close (calibrate.py), a little under the sqrt(1/2) that halving the
 # scoring alone would give - the end of a game adds variance (fouling, garbage time).
 H1_SD = {"nba": 0.67, "ncaam": 0.60, "wnba": 0.60}
 H1_SHARE = {"nba": 0.505, "wnba": 0.50, "ncaam": 0.475, "ncaaw": 0.49, "euroleague": 0.50,
-            "eurocup": 0.50, "acb": 0.484, "nbl": 0.511}   # acb, nbl: measured, 2023-26
+            "eurocup": 0.50, "acb": 0.484, "nbl": 0.511, "lba": 0.49}   # acb, nbl: measured, 2023-26
 
 
 def replay(cur, league: str) -> State:
@@ -114,7 +114,7 @@ def reference(game: dict, swapped: bool) -> dict | None:
 
 # Totals outside these are typing errors in the feed (an NBA close of 73.5).
 PLAUSIBLE = {"nba": (180, 280), "wnba": (130, 200), "ncaam": (100, 190), "ncaaw": (90, 180),
-             "euroleague": (130, 210), "eurocup": (130, 220), "acb": (130, 210), "nbl": (140, 240)}
+             "euroleague": (130, 210), "eurocup": (130, 220), "acb": (130, 210), "nbl": (140, 240), "lba": (130, 210)}
 
 
 def price_event(st: State, share: float, game: dict, swapped: bool, odds: list[dict]) -> list[dict]:

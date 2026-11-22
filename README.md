@@ -38,7 +38,7 @@ off, at prices near evens. That is what most tips are. Whether enough of it
 is left after Betano's margin is what the settled record (betken.cz) will
 show.
 
-The European leagues (EuroLeague, EuroCup, Liga Endesa) have no sharper line to centre
+The European leagues (EuroLeague, EuroCup, Liga Endesa, Italy's Serie A) have no sharper line to centre
 on: their lines are priced around Betano's own centre and settled, but not
 tipped.
 
@@ -56,6 +56,15 @@ tipped.
   game counts only when its competitionId is 1. Finished games are cached in
   `cache/acb/`; `collect.py --history --leagues acb` reads ids from 102800 (2023-24
   on) and takes about 45 minutes the first time.
+- **Lega Basket's API** (`bpoints/legabasket.py`): Italy's Serie A (LBA),
+  `www.legabasket.it/api/championships/...`. A season is two championships
+  (regular season, playoffs; 2026-27's regular season is 602), listed round by
+  round, with each finished game's quarters from its own call; overtime is one
+  figure, so any overtime game counts as five periods. Clubs are keyed on their
+  three-letter code (the numeric team id is new every season). Two seconds
+  between requests, as robots.txt asks; finished rounds and games are cached in
+  `cache/lba/`. `collect.py --history --leagues lba` (2023-24 on) takes about
+  40 minutes the first time.
 
 ```bash
 pip install -r requirements.txt

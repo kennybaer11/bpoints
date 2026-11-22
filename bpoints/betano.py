@@ -35,7 +35,8 @@ MARKETS = {"FTPO": ("total", "ft", 0), "OUHO": ("team_total", "ft", 1),
 LEAGUES = {"/usa/nba/": "nba", "/usa/nba-cup/": "nba", "/usa/wnba/": "wnba",
            "/usa/ncaa/": "ncaam", "/usa/wncaa/": "ncaaw",
            "/euroliga/euroliga/": "euroleague", "/eurocup/eurocup/": "eurocup",
-           "/spanelsko/liga-endesa/": "acb", "/australie/nbl/": "nbl"}
+           "/spanelsko/liga-endesa/": "acb", "/australie/nbl/": "nbl",
+           "/italie/serie-a/": "lba"}
 
 _s = requests.Session()
 _s.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

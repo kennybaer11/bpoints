@@ -7,6 +7,7 @@
 ESPN: NBA, WNBA, NCAA men and women. Euroleague's API: EuroLeague and EuroCup
 (always read a whole season at a time - one request). ACB's match pages: Liga
 Endesa, one page per game (finished ones are cached, so only the first run is long).
+Lega Basket's API: Italy's Serie A, a season round by round, finished games cached.
 """
 
 import argparse
@@ -16,13 +17,13 @@ from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
-from bpoints import acb, db, espn, euroleague
+from bpoints import acb, db, espn, euroleague, legabasket
 
 log = logging.getLogger("collect")
 
 HISTORY = {"nba": date(2023, 10, 1), "wnba": date(2024, 5, 1), "ncaam": date(2024, 11, 1),
            "ncaaw": date(2024, 11, 1), "euroleague": 2022, "eurocup": 2022,
-           "acb": 102800, "nbl": date(2023, 9, 1)}   # for acb: the first match id read (2023-24 onwards), not a year
+           "acb": 102800, "nbl": date(2023, 9, 1), "lba": 2023}   # for acb: the first match id read (2023-24 onwards), not a year
 # Days with no games in a league are skipped by the scoreboard anyway, but the
 # off-season is a few hundred requests saved.
 SEASON_MONTHS = {"nba": {10, 11, 12, 1, 2, 3, 4, 5, 6}, "wnba": {5, 6, 7, 8, 9, 10},
@@ -84,6 +85,32 @@ def collect_league(conn, league, args, today):
             save()
         log.info("acb ids %d-%d: %d games, %d final", first, last, len(out),
                  sum(g["status"] == "final" for g, _ in out))
+        return
+    if league == legabasket.LEAGUE:
+        first = HISTORY[league] if args.history else legabasket.current_season()
+        if args.start:
+            first = args.start.year if args.start.month >= 8 else args.start.year - 1
+        games, teams, n, n_final = [], [], 0, 0
+
+        def save_lba():
+            # A fresh connection each time, as for ACB: the one opened at the
+            # start is dropped by the server during the long scrape.
+            c = db.connect()
+            try:
+                db.save_games(c, games, teams)
+            finally:
+                c.close()
+            games.clear()
+            teams.clear()
+
+        for g, ts in legabasket.games(first):
+            games.append(g)
+            teams += ts
+            n, n_final = n + 1, n_final + (g["status"] == "final")
+            if len(games) >= 100:            # a long first run is saved as it goes
+                save_lba()
+        save_lba()
+        log.info("lba from %d-%02d: %d games, %d final", first, (first + 1) % 100, n, n_final)
         return
     if league in euroleague.LEAGUES:
         cur = euroleague.current_season()
