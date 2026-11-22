@@ -143,7 +143,7 @@ better edge.
 
 ## On the server
 
-`deploy/run_bpoints.sh` in the posession repo runs every three hours: collect,
+`deploy/run_bpoints.sh` in the posession repo runs every two hours: collect,
 settle, price, advice, notify - and at 15:00 and 21:00 Chance's lines first
 (`run_bpoints.sh chance`). **Betano refuses the server** (HTTP 403), so
 its lines come from the owner's PC, like the tennis and CS2 lines:
