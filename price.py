@@ -188,9 +188,12 @@ def main():
                 if e["event_id"] not in pairs:
                     continue
                 game, swapped = pairs[e["event_id"]]
+                # Only the lines Betano showed at its latest look at this game:
+                # save_odds stamps the event and its lines with the same now(),
+                # so a line it has since moved off (58.5 -> 60.5) is older.
                 cur.execute("""SELECT market, period, team, side, line, price FROM bpoints.odds
-                                WHERE (bookmaker, event_id) = (%s, %s)""",
-                            (e["bookmaker"], e["event_id"]))
+                                WHERE (bookmaker, event_id) = (%s, %s) AND last_seen >= %s""",
+                            (e["bookmaker"], e["event_id"], e["last_seen"]))
                 rows = price_event(st, share, game, swapped, cur.fetchall())
                 n_lines += len(rows)
                 for r in rows:
@@ -199,6 +202,10 @@ def main():
                     cur.execute("""UPDATE bpoints.bk_event SET game_id = %s, swapped = %s
                                     WHERE (bookmaker, event_id) = (%s, %s)""",
                                 (game["game_id"], swapped, e["bookmaker"], e["event_id"]))
+                    # The game is still to start: its prices are rewritten, and
+                    # a line no longer offered must not stay to be tipped.
+                    cur.execute("DELETE FROM bpoints.priced WHERE (bookmaker, event_id) = (%s, %s)",
+                                (e["bookmaker"], e["event_id"]))
                     cur.executemany(
                         f"""INSERT INTO bpoints.priced (bookmaker, event_id, {', '.join(COLS)})
                             VALUES (%s, %s, {', '.join(['%s'] * len(COLS))})
