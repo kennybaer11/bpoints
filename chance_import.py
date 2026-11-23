@@ -90,6 +90,12 @@ def price(text: str) -> float | None:
     return p if p > 1 else None
 
 
+def site_path(url: str) -> str:
+    """A link as the site stores it: the path only, as Betano's are - betken.cz
+    puts the bookmaker's address in front (https://www.chance.cz + path)."""
+    return re.sub(r"^https?://[^/]+", "", url or "")
+
+
 def match_id(url: str) -> str | None:
     """Chance's match id from a game's link (/kurzy/zapas/basketbal-x-y/8523606[/co-se-sazi])."""
     m = re.search(r"/kurzy/zapas/[^/]+/(\d+)", url or "")
@@ -142,7 +148,7 @@ def read(path: Path, scraped: datetime):
                 comp = " ".join((r.get("competition") or "").split())
                 events[ev] = {"event_id": ev, "kickoff": ko, "league": comp,
                               "our_league": our_league(comp), "team1": r["home"].strip(),
-                              "team2": r["away"].strip(), "url": href}
+                              "team2": r["away"].strip(), "url": site_path(href)}
             records[ev].append(r)
     out = [(e, market_lines(records[ev], e["team1"], e["team2"], skipped)) for ev, e in events.items()]
     for k, n in skipped.items():

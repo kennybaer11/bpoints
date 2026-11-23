@@ -205,7 +205,7 @@ def main():
             continue
         t1, t2 = first["home"].strip(), first["away"].strip()
         e = {"event_id": ev, "kickoff": g["tipoff"], "league": lg, "our_league": lg,
-             "team1": t1, "team2": t2, "url": link}
+             "team1": t1, "team2": t2, "url": ci.site_path(link)}
         rows = ci.market_lines(recs, t1, t2)
         out.append((e, rows))
         log.info("  %s - %s: %d lines", t1, t2, len(rows))
