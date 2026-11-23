@@ -25,6 +25,8 @@ foreach ($line in Get-Content "C:\Users\kenny\posession\scraper\.env") {
 & $py collect.py
 & $py odds.py
 if ($LASTEXITCODE -ne 0) { Write-Host "!! odds.py exited $LASTEXITCODE - stopping"; exit 1 }
+& $py sazka_odds.py
+if ($LASTEXITCODE -ne 0) { Write-Host "!! sazka_odds.py exited $LASTEXITCODE - going on without SazkaBet" }
 & $py price.py --store --top 0
 & $py advice.py
 & $py notify.py

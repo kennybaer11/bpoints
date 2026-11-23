@@ -64,7 +64,8 @@ def stake(p: float, odds: float) -> int:
 # Lines from a scrape (chance_pipeline.py twice a day, or chance_import.py) are only as
 # fresh as that scrape: older than this, they are not tipped (and a tip on them
 # is withdrawn). Betano's are read on every run, so they have no limit here.
-MAX_AGE = {"chance": "6 hours"}   # scraped at 15:00 and 21:00: covers each evening
+MAX_AGE = {"chance": "6 hours",   # scraped at 15:00 and 21:00: covers each evening
+           "sazka": "3 hours"}    # read every run; older means the reads stopped
 
 CANDIDATES = """
     SELECT p.bookmaker, p.event_id, e.kickoff, e.league, e.team1, e.team2,

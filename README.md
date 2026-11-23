@@ -105,6 +105,17 @@ rewritten until its game starts and locked by the database from then on.
 Totals include overtime, as Betano settles them; a whole-number line that
 lands exactly is void.
 
+## SazkaBet
+
+SazkaBet (now www.allwyn.cz) lists every game of a league in one JSON call,
+each with its total-points ladder and its first-half total
+(`bpoints/sazka.py`; each team's points are on another host and not read).
+Its site sends a fixed `X-API-KEY` with these calls and so does this.
+`sazka_odds.py` stores the lines as bookmaker `sazka`, after `odds.py` on the
+PC and every two hours on the server; Czech place names ("Severní Karolína")
+are put into English for pairing. The totals are taken to include overtime, as
+Betano's do (their lines sit within a few points of Betano's, either side).
+
 ## Chance
 
 Chance (chance.cz) has the same points markets as Betano - total and each
