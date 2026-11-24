@@ -30,7 +30,7 @@ PRAGUE = ZoneInfo("Europe/Prague")
 TELEGRAM_LIMIT = 3500
 SITE = "https://betken.cz/basketball"
 RATING_STEP = 1
-BOOKS = {"betano": "Betano", "chance": "Chance", "sazka": "SazkaBet"}
+BOOKS = {"betano": "Betano", "chance": "Chance", "sazka": "SazkaBet", "fortuna": "Fortuna"}
 MARKETS = {"total": "total points", "team_total": "team points"}
 
 BET = "(market || '|' || period || '|' || team || '|' || side || '|' || line::float)"

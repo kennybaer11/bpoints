@@ -117,6 +117,18 @@ tipped on the same rules. The key is `ODDS_API_KEY` in posession's `.env`. A
 call costs 2 of the free plan's 500 credits a month, so it runs on the server
 only, at most every 4 hours and only with a game in the next 36.
 
+## Fortuna
+
+Fortuna (ifortuna.cz) serves scripts a Cloudflare "Geoblock" page, so its
+lines come through webscraper.io's Cloud like Chance's (`fortuna_pipeline.py`):
+the league pages of the tipped leagues (NBA, NCAA, EuroLeague), then the pages
+of our games in the next 12 hours, a credit a page, with the first-half cards
+clicked open. Each game has full ladders: the total and each team's points,
+whole game (overtime in) and first half. Stored as bookmaker `fortuna`; on the
+server at 15:00 (the EuroLeague only) and 21:00 (all three), in the `chance`
+runs. A listed game's two names run together on the page, so they are split
+where a small letter meets a capital, keeping the split that pairs.
+
 ## SazkaBet
 
 SazkaBet (now www.allwyn.cz) lists every game of a league in one JSON call,

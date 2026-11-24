@@ -14,7 +14,7 @@ The rules, as for the tennis and CS2 tips:
     MAX_ODDS, and a price on both sides of the line (to take the margin out);
   - at most one tip per game and period (whole game, first half): the line
     with the best blended edge among the total and both teams' points, at
-    whichever bookmaker (Betano, Chance) has it - a ladder's lines, a total
+    whichever bookmaker (Betano, Chance, SazkaBet, Fortuna) has it - a ladder's lines, a total
     and its team totals, and the same line at two bookmakers are one bet;
   - stake: quarter Kelly on the chance blended half and half with the
     bookmaker's, scaled down above odds of 3.0, 1-10 tenths of a unit, and the
@@ -68,6 +68,7 @@ def stake(p: float, odds: float) -> int:
 # fresh as that scrape: older than this, they are not tipped (and a tip on them
 # is withdrawn). Betano's are read on every run, so they have no limit here.
 MAX_AGE = {"chance": "6 hours",   # scraped at 15:00 and 21:00: covers each evening
+           "fortuna": "6 hours",  # the same (fortuna_pipeline.py)
            "sazka": "3 hours"}    # read every run; older means the reads stopped
 
 CANDIDATES = """
