@@ -105,6 +105,18 @@ rewritten until its game starts and locked by the database from then on.
 Totals include overtime, as Betano settles them; a whole-number line that
 lands exactly is void.
 
+## The EuroLeague's centre: The Odds API
+
+DraftKings has no European lines, and a centre on Betano's own ladder leaves no
+room for a tip. `oddsapi_lines.py` reads the EuroLeague's totals and handicaps
+from The Odds API (`bpoints/oddsapi.py`, region `eu`): Pinnacle's line when it
+is there, else the median of the European books. It writes them to
+`bpoints.game` (`close_total`, `close_spread`, `close_from = 'oddsapi'`), the
+slot DraftKings fills for the American games, so the EuroLeague is priced and
+tipped on the same rules. The key is `ODDS_API_KEY` in posession's `.env`. A
+call costs 2 of the free plan's 500 credits a month, so it runs on the server
+only, at most every 4 hours and only with a game in the next 36.
+
 ## SazkaBet
 
 SazkaBet (now www.allwyn.cz) lists every game of a league in one JSON call,

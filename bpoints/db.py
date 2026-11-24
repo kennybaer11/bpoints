@@ -38,7 +38,11 @@ TEAM_COLS = ["league", "team_id", "name", "short_name", "location", "abbrev"]
 def upsert(conn, table: str, cols: list[str], rows: list[dict], key: list[str], touch: str = ""):
     if not rows:
         return
-    updates = ", ".join([f"{c}=EXCLUDED.{c}" for c in cols if c not in key] +
+    # A feed without a line (the EuroLeague's own) must not wipe one written
+    # from elsewhere (oddsapi_lines.py): those columns keep their value.
+    keep = {"close_total", "close_spread"}
+    updates = ", ".join([f"{c}=coalesce(EXCLUDED.{c}, {table}.{c})" if c in keep else f"{c}=EXCLUDED.{c}"
+                         for c in cols if c not in key] +
                         ([f"{touch}=now()"] if touch else []))
     sql = (f"INSERT INTO bpoints.{table} ({', '.join(cols)}) "
            f"VALUES ({', '.join(['%s'] * len(cols))}) "

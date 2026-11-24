@@ -39,9 +39,12 @@ EDGE = 0.06
 MIN_ODDS, MAX_ODDS = 1.40, 3.50
 BLEND = 0.75
 PERIODS = ["ft", "h1"]
-# Only where the centre is DraftKings' line: the European leagues have no sharper
-# reference, and their lines are priced and settled (the admin page) but not tipped.
-LEAGUES = ["nba", "ncaam", "wnba"]   # ncaaw once its spread is calibrated
+# Only where the centre is a sharp line - DraftKings' (ESPN), or for the EuroLeague
+# Pinnacle's or the European books' median (The Odds API). Lines centred on the
+# bookmaker's own ladder are priced and settled (the admin page) but not tipped.
+LEAGUES = ["nba", "ncaam", "wnba",   # ncaaw once its spread is calibrated
+           "euroleague"]             # centred on The Odds API's line (oddsapi_lines.py)
+SHARP_CENTRES = ["draftkings", "oddsapi"]
 
 
 def code_version():
@@ -75,7 +78,7 @@ CANDIDATES = """
       FROM bpoints.priced p
       JOIN bpoints.bk_event e USING (bookmaker, event_id)
      WHERE e.kickoff > now() AND p.period = ANY(%s) AND e.our_league = ANY(%s)
-       AND p.p_book IS NOT NULL AND p.centre_from = 'draftkings'
+       AND p.p_book IS NOT NULL AND p.centre_from = ANY(%s)
        AND NOT EXISTS (SELECT 1 FROM jsonb_each_text(%s::jsonb) a
                         WHERE a.key = e.bookmaker AND e.last_seen < now() - a.value::interval)"""
 
@@ -91,7 +94,7 @@ def main():
                          FROM bpoints.advice a JOIN bpoints.bk_event e USING (bookmaker, event_id)
                         WHERE a.placed AND a.backed AND a.kickoff > now()""")
         placed = set(cur.fetchall())
-        cur.execute(CANDIDATES, (PERIODS, LEAGUES, json.dumps(MAX_AGE)))
+        cur.execute(CANDIDATES, (PERIODS, LEAGUES, SHARP_CENTRES, json.dumps(MAX_AGE)))
         best, events = {}, {}
         for (bk, ev, kickoff, league, t1, t2, game, market, period, team, side, line, price,
              p_raw, p_book) in cur.fetchall():

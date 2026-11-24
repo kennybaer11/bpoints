@@ -156,7 +156,10 @@ CREATE INDEX IF NOT EXISTS advice_kickoff_idx ON bpoints.advice (kickoff);
 -- The reference centre a line was priced on: DraftKings' line from ESPN for
 -- the American leagues (a much sharper market than Betano's on them).
 ALTER TABLE bpoints.priced ADD COLUMN IF NOT EXISTS mu_ref NUMERIC;
-ALTER TABLE bpoints.priced ADD COLUMN IF NOT EXISTS centre_from TEXT;   -- draftkings | betano | model
+ALTER TABLE bpoints.priced ADD COLUMN IF NOT EXISTS centre_from TEXT;   -- draftkings | oddsapi | betano | model
+-- Where close_total/close_spread came from: NULL = DraftKings (ESPN), 'oddsapi' = The Odds API
+-- (the European games: Pinnacle's line, else the median of the European books).
+ALTER TABLE bpoints.game ADD COLUMN IF NOT EXISTS close_from TEXT;
 
 CREATE OR REPLACE FUNCTION bpoints.advice_locked() RETURNS trigger AS $$
 BEGIN

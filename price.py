@@ -110,7 +110,15 @@ def pair_events(cur, league: str, events: list[dict]):
     out = {}
     for e in events:
         if e["game_id"] and e["game_id"] in by_id:
-            out[e["event_id"]] = (by_id[e["game_id"]], e["swapped"])
+            # Home and away are checked again on every run: the results feed
+            # can turn a game round after it was paired (Wyoming - Kent State,
+            # 24 Nov 2026: each team got the other's share of the line).
+            g = by_id[e["game_id"]]
+            again = names.pair(e, [g], teams)
+            swapped = again[1] if again else e["swapped"]
+            if again and swapped != e["swapped"]:
+                log.warning("%s - %s: home and away turned round since pairing", e["team1"], e["team2"])
+            out[e["event_id"]] = (g, swapped)
             continue
         hit = names.pair(e, games, teams)
         if hit:
@@ -166,7 +174,7 @@ def price_event(st: State, share: float, game: dict, swapped: bool, odds: list[d
         no_vig = [(ln, (1 / pr["over"]) / (1 / pr["over"] + 1 / pr["under"]))
                   for ln, pr in ladder.items() if "over" in pr and "under" in pr]
         mu_book = implied_centre(no_vig, s)
-        base, source = ((mu_ref, "draftkings") if mu_ref is not None else
+        base, source = ((mu_ref, game.get("close_from") or "draftkings") if mu_ref is not None else
                         (mu_book, "betano") if mu_book is not None else (mu_model, "model"))
         mu = base + W[st.league] * (mu_model - base)
         q_book = dict(no_vig)
