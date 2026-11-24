@@ -47,6 +47,13 @@ W = {"nba": 0.0, "wnba": 0.0, "ncaam": 0.10, "ncaaw": 0.25, "euroleague": 0.15,
 # the close (calibrate.py), a little under the sqrt(1/2) that halving the
 # scoring alone would give - the end of a game adds variance (fouling, garbage time).
 H1_SD = {"nba": 0.67, "ncaam": 0.60, "wnba": 0.60}
+# One team's first half spreads relatively wider than the total's - the two
+# teams' halves partly cancel in the total. Measured the same way against
+# DraftKings' close (team expected = (total -+ spread) / 2): NCAA 0.678 over
+# 12,446 games, NBA 0.721 over 4,493, WNBA 0.668 over 359. Pricing team halves
+# with the total's ratio made the model 7-12% too sure of them, so their edges
+# were overstated (NCAA team-half tips: 12 won from 24 against 14.7 expected).
+H1_SD_TEAM = {"nba": 0.72, "ncaam": 0.68, "wnba": 0.67}
 H1_SHARE = {"nba": 0.505, "wnba": 0.50, "ncaam": 0.475, "ncaaw": 0.49, "euroleague": 0.50,
             "eurocup": 0.50, "acb": 0.484, "nbl": 0.511, "lba": 0.49}   # acb, nbl: measured, 2023-26
 
@@ -66,6 +73,23 @@ def replay(cur, league: str) -> State:
 
 def h1_share(cur, league: str) -> float:
     # Of the full-game points, overtime included: it is applied to the full-game centre.
+    # Measured on this month and the one before, in the last three seasons: the
+    # share moves through a season. NCAA first halves score 47.4% in November and
+    # December and 46.8% from January, every season; one figure for the whole
+    # year (47.0%) put November's first-half centre 0.6 points low, and the
+    # settled lines showed it (actual minus the model's centre +1.15, Betano's
+    # own +0.53, over 109 games), with the unders it tipped going 12 from 24.
+    cur.execute("""SELECT sum(home_h1 + away_h1)::float / nullif(sum(home_pts + away_pts), 0) AS s,
+                          count(*) AS n
+                     FROM bpoints.game WHERE league = %s AND status = 'final' AND home_h1 IS NOT NULL
+                      AND tipoff > now() - interval '3 years'
+                      AND extract(month FROM tipoff AT TIME ZONE 'America/New_York') IN
+                          (extract(month FROM now()), extract(month FROM now() - interval '1 month'))""",
+                (league,))
+    r = cur.fetchone()
+    if r and r["n"] and r["n"] > 200:
+        return r["s"]
+    # Too few games in these months (a league's first weeks): the last two years.
     cur.execute("""SELECT sum(home_h1 + away_h1)::float / nullif(sum(home_pts + away_pts), 0) AS s,
                           count(*) AS n
                      FROM bpoints.game WHERE league = %s AND status = 'final' AND home_h1 IS NOT NULL
@@ -136,7 +160,8 @@ def price_event(st: State, share: float, game: dict, swapped: bool, odds: list[d
         k = 0 if market == "total" else team
         mu_model, s, mu_ref = model[k], spread[k], ref[k] if ref else None
         if period == "h1":
-            mu_model, s = mu_model * share, s * H1_SD.get(st.league, 0.70)
+            ratio = (H1_SD_TEAM.get(st.league, 0.75) if k else H1_SD.get(st.league, 0.70))
+            mu_model, s = mu_model * share, s * ratio
             mu_ref = mu_ref * share if mu_ref is not None else None
         no_vig = [(ln, (1 / pr["over"]) / (1 / pr["over"] + 1 / pr["under"]))
                   for ln, pr in ladder.items() if "over" in pr and "under" in pr]
