@@ -65,6 +65,18 @@ def main():
             tips.append((res, actual, bk, ev, slot))
         cur.executemany("""UPDATE bpoints.advice SET result=%s, actual=%s, settled_at=now()
                             WHERE (bookmaker, event_id, slot) = (%s,%s,%s)""", tips)
+        # The tip as first announced (notify.py's first_*), settled on its own line.
+        cur.execute(ROWS.format(key="x.bookmaker, x.event_id, x.slot", table="advice")
+                    .replace("x.result IS NULL", "x.first_result IS NULL AND x.first_line IS NOT NULL")
+                    .replace("x.market, x.period, x.team, x.side, x.line::float",
+                             "x.first_market, x.first_period, x.first_team, x.first_side, x.first_line::float"))
+        firsts = []
+        for bk, ev, slot, market, period, team, side, line, sw, hp, ap, h1h, h1a in cur.fetchall():
+            res, actual = outcome(market, period, team, side, line, sw, hp, ap, h1h, h1a)
+            firsts.append((res, actual, bk, ev, slot))
+        cur.executemany("""UPDATE bpoints.advice SET first_result=%s, first_actual=%s
+                            WHERE (bookmaker, event_id, slot) = (%s,%s,%s)""", firsts)
+        log.info("%d first-announced tips settled", len(firsts))
         cur.execute("""
             UPDATE bpoints.advice a SET result = 'void', settled_at = now()
               FROM bpoints.bk_event e

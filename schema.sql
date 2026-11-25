@@ -153,6 +153,19 @@ CREATE TABLE IF NOT EXISTS bpoints.advice (
 );
 CREATE INDEX IF NOT EXISTS advice_kickoff_idx ON bpoints.advice (kickoff);
 
+-- The tip as Telegram first announced it (notify.py fills these once, when a tip
+-- is first told, and never changes them): the bet the record's statistics count,
+-- whatever the tip became afterwards. first_result/first_actual are settle.py's.
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_market TEXT;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_period TEXT;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_team   INTEGER;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_side   TEXT;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_line   NUMERIC;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_odds   NUMERIC;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_rating SMALLINT;
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_result TEXT;      -- won | lost | void
+ALTER TABLE bpoints.advice ADD COLUMN IF NOT EXISTS first_actual INTEGER;
+
 -- The reference centre a line was priced on: DraftKings' line from ESPN for
 -- the American leagues (a much sharper market than Betano's on them).
 ALTER TABLE bpoints.priced ADD COLUMN IF NOT EXISTS mu_ref NUMERIC;

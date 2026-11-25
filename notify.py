@@ -127,9 +127,19 @@ def build(rows, changed=False):
 def mark_told(conn, rows):
     with conn.cursor() as cur:
         for r in rows:
+            # first_*: the tip as first announced, kept for the record's statistics
+            # (COALESCE: set once, whatever a later message says).
             cur.execute(f"""UPDATE bpoints.advice
                                SET told_bet = CASE WHEN backed THEN {BET} END,
-                                   told_rating = rating, told_at = now()
+                                   told_rating = rating, told_at = now(),
+                                   first_market = COALESCE(first_market, market),
+                                   first_period = COALESCE(first_period, period),
+                                   first_team = COALESCE(first_team, team),
+                                   first_side = COALESCE(first_side, side),
+                                   first_line = COALESCE(first_line, line),
+                                   first_odds = COALESCE(first_odds, odds),
+                                   first_rating = CASE WHEN first_odds IS NULL THEN rating
+                                                       ELSE first_rating END
                              WHERE (bookmaker, event_id, slot) = (%s, %s, %s)""",
                         (r["bookmaker"], r["event_id"], r["slot"]))
     conn.commit()
