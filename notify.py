@@ -2,7 +2,7 @@
 """Telegram messages for the basketball tips - the twin of the CS2 notify.py:
 same bot, same chat, with a 🏀 so the sports are told apart.
 
-    python notify.py             announce new tips and changed ones
+    python notify.py             announce new tips (and changed ones if NOTIFY_CHANGES=1)
     python notify.py --dry-run   print what would be sent, send nothing
     python notify.py --test      one message, to check the wiring
 
@@ -31,6 +31,9 @@ PRAGUE = ZoneInfo("Europe/Prague")
 TELEGRAM_LIMIT = 3500
 SITE = "https://betken.cz/basketball"
 RATING_STEP = 1
+# Messages for tips that changed (stake moved, tip withdrawn) are off for now; the
+# tips are still rewritten and recorded, and NOTIFY_CHANGES=1 (environment or .env)
+# turns the messages on.
 BOOKS = {"betano": "Betano", "chance": "Chance", "sazka": "SazkaBet", "fortuna": "Fortuna"}
 MARKETS = {"total": "total points", "team_total": "team points"}
 
@@ -153,7 +156,8 @@ def main():
     fresh = fetch(conn, "told_at IS NULL AND backed")
     moved = fetch(conn, f"""told_at IS NOT NULL
         AND ((CASE WHEN backed THEN {BET} END) IS DISTINCT FROM told_bet
-             OR (backed AND abs(COALESCE(rating, 0) - COALESCE(told_rating, 0)) >= {RATING_STEP}))""")
+             OR (backed AND abs(COALESCE(rating, 0) - COALESCE(told_rating, 0)) >= {RATING_STEP}))"""
+                  ) if os.getenv("NOTIFY_CHANGES", "").lower() in ("1", "true", "yes") else []
     if not (fresh or moved):
         log.info("No new basketball tip, nothing changed.")
         return 0
