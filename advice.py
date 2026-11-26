@@ -39,6 +39,10 @@ EDGE = 0.06
 MIN_ODDS, MAX_ODDS = 1.40, 3.50
 BLEND = 0.75
 PERIODS = ["ft", "h1"]
+# Full-game overs are not tipped (from 26 Nov 2026): 1 won of 6 on the totals in
+# the first 127 tips, the final totals landing 2 points under the line. Revisit
+# with more settled tips.
+NO_FT_OVERS = True
 # Only where the centre is a sharp line - DraftKings' (ESPN), or for the EuroLeague
 # Pinnacle's or the European books' median (The Odds API). Lines centred on the
 # bookmaker's own ladder are priced and settled (the admin page) but not tipped.
@@ -101,6 +105,8 @@ def main():
              p_raw, p_book) in cur.fetchall():
             events[(bk, ev)] = (kickoff, league, t1, t2)
             if not (MIN_ODDS <= price <= MAX_ODDS):
+                continue
+            if NO_FT_OVERS and period == "ft" and side == "over":
                 continue
             p = BLEND * p_raw + (1 - BLEND) * p_book
             edge = p * price - 1
