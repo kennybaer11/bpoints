@@ -2,15 +2,15 @@
 """Telegram messages for the basketball tips - the twin of the CS2 notify.py:
 same bot, same chat, with a 🏀 so the sports are told apart.
 
-    python notify.py             announce new tips (and changed ones if NOTIFY_CHANGES=1)
+    python notify.py             announce new tips
     python notify.py --dry-run   print what would be sent, send nothing
     python notify.py --test      one message, to check the wiring
 
-A tip is rewritten on every run until its game starts, so an announcement is
-a snapshot: a tip can appear, move to another line, change stake, or be
-withdrawn. bpoints.advice remembers what Telegram was last told (told_bet,
-told_rating, told_at); nothing is marked as told until Telegram has accepted
-the message, so a failed send is retried on the next run.
+Each tip is announced once and never revised. Until then advice.py may move
+or withdraw it unseen; once Telegram has accepted the message (told_at), the
+tip is locked like a placed one, so the site and the record keep what was
+sent. Nothing is marked as told until Telegram has accepted it, so a failed
+send is retried on the next run.
 """
 
 import argparse
@@ -30,10 +30,10 @@ log = logging.getLogger("notify")
 PRAGUE = ZoneInfo("Europe/Prague")
 TELEGRAM_LIMIT = 3500
 SITE = "https://betken.cz/basketball"
-RATING_STEP = 1
-# Messages for tips that changed (stake moved, tip withdrawn) are off for now; the
-# tips are still rewritten and recorded, and NOTIFY_CHANGES=1 (environment or .env)
-# turns the messages on.
+# Only tips at this value or more are announced. On the first 95 settled, those
+# at 6-8% won 10 of 26 (the odds implied 12.9), those above won 38 of 69 (31.7).
+# The others are still tips on the site.
+ANNOUNCE_EDGE = 0.08
 BOOKS = {"betano": "Betano", "chance": "Chance", "sazka": "SazkaBet", "fortuna": "Fortuna"}
 MARKETS = {"total": "total points", "team_total": "team points"}
 
@@ -109,7 +109,7 @@ def build(rows, changed=False):
                   f"version before it.</i>\n<a href=\"{SITE}\">Basketball tips</a>")
     else:
         header = f"🏀 <b>New basketball tips</b> - {n}"
-        footer = ("\n\n<i>Over/under points lines at +6% value or more, at most one per game and half. "
+        footer = ("\n\n<i>Over/under points lines at +8% value or more, at most one per game and half. "
                   f"A new model, not yet proven against Betano - small stakes. \"Down to\" is the "
                   f"lowest price still worth taking if the odds drop.</i>\n"
                   f"<a href=\"{SITE}\">Basketball tips</a>")
@@ -163,28 +163,23 @@ def main():
 
     from bpoints import db
     conn = db.connect()
-    fresh = fetch(conn, "told_at IS NULL AND backed")
-    moved = fetch(conn, f"""told_at IS NOT NULL
-        AND ((CASE WHEN backed THEN {BET} END) IS DISTINCT FROM told_bet
-             OR (backed AND abs(COALESCE(rating, 0) - COALESCE(told_rating, 0)) >= {RATING_STEP}))"""
-                  ) if os.getenv("NOTIFY_CHANGES", "").lower() in ("1", "true", "yes") else []
-    if not (fresh or moved):
-        log.info("No new basketball tip, nothing changed.")
+    fresh = fetch(conn, f"told_at IS NULL AND backed AND edge >= {ANNOUNCE_EDGE}")
+    if not fresh:
+        log.info("No new basketball tip.")
         return 0
-    messages = (build(fresh) if fresh else []) + (build(moved, changed=True) if moved else [])
+    messages = build(fresh)
     if args.dry_run or not (token and chat):
         if not args.dry_run:
-            log.info("TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set - %d new and %d changed "
-                     "tip(s) left unannounced.", len(fresh), len(moved))
+            log.info("TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set - %d tip(s) left unannounced.",
+                     len(fresh))
         for m in messages:
             print(m, end="\n\n")
         return 0
     for m in messages:
         api("sendMessage", token, chat_id=chat, text=m, parse_mode="HTML",
             disable_web_page_preview="true")
-    mark_told(conn, fresh + moved)
-    log.info("Announced %d new and %d changed tip(s) in %d message(s).",
-             len(fresh), len(moved), len(messages))
+    mark_told(conn, fresh)
+    log.info("Announced %d tip(s) in %d message(s).", len(fresh), len(messages))
     return 0
 
 

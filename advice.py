@@ -96,12 +96,15 @@ def main():
     load_dotenv()
     version = code_version()
     with db.open_conn() as conn, conn.cursor() as cur:
-        # A placed tip is locked, and its game and period are taken: another
+        # A placed tip is locked, and so is one Telegram has announced: the
+        # announcement is the bet, sent once and never revised (40% of the
+        # first 158 announced were later withdrawn as prices moved, which no
+        # one could follow). Its game and period are taken: another
         # bookmaker's line there would be the same bet a second time.
         cur.execute("""SELECT coalesce(e.our_league || ':' || e.game_id, a.bookmaker || ':' || a.event_id),
                               a.period
                          FROM bpoints.advice a JOIN bpoints.bk_event e USING (bookmaker, event_id)
-                        WHERE a.placed AND a.backed AND a.kickoff > now()""")
+                        WHERE (a.placed OR a.told_at IS NOT NULL) AND a.backed AND a.kickoff > now()""")
         placed = set(cur.fetchall())
         cur.execute(CANDIDATES, (PERIODS, LEAGUES, SHARP_CENTRES, json.dumps(MAX_AGE)))
         best, events = {}, {}
@@ -151,7 +154,8 @@ def main():
                   p_model=EXCLUDED.p_model, p_raw=EXCLUDED.p_raw, edge=EXCLUDED.edge,
                   rating=EXCLUDED.rating, backed=true, code_version=EXCLUDED.code_version,
                   advised_at=now()
-                WHERE bpoints.advice.kickoff > now() AND NOT bpoints.advice.placed""",
+                WHERE bpoints.advice.kickoff > now() AND NOT bpoints.advice.placed
+                  AND bpoints.advice.told_at IS NULL""",
                         (bk, ev, slot, kickoff, league, t1, t2, t["market"], t["period"],
                          t["team"], t["side"], t["line"], t["odds"], t["p"], t["p_raw"],
                          t["edge"], t["rating"], version))
@@ -159,7 +163,7 @@ def main():
         keep = [f"{t['bk']}|{t['ev']}|{t['period']}" for t in best.values()]
         cur.execute("""
             UPDATE bpoints.advice SET backed = false, advised_at = now()
-             WHERE backed AND kickoff > now() AND NOT placed
+             WHERE backed AND kickoff > now() AND NOT placed AND told_at IS NULL
                AND NOT (bookmaker || '|' || event_id || '|' || slot = ANY(%s))""", (keep,))
         withdrawn = cur.rowcount
         cur.execute("""
