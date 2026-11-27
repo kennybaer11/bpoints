@@ -102,6 +102,11 @@ Tip rules (`advice.py`): the model's chance blended 3:1 with Betano's own
 line, centred on DraftKings, at most one tip per game and period (a total and
 its team totals are one bet), quarter-Kelly stakes shared per game. A tip is
 rewritten until its game starts and locked by the database from then on.
+No NCAA full-game tips: there DraftKings' line is no sharper than Betano's,
+so the model has nothing to beat it with (`advice.NO_FT_LEAGUES`). NCAA
+spreads are widened 10% at pricing time (`price.SD_WIDEN`): priced hours
+before the close they were calibrated on, the lines missed by more than the
+spread allowed.
 Totals include overtime, as Betano settles them; a whole-number line that
 lands exactly is void.
 

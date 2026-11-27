@@ -54,6 +54,13 @@ H1_SD = {"nba": 0.67, "ncaam": 0.60, "wnba": 0.60}
 # with the total's ratio made the model 7-12% too sure of them, so their edges
 # were overstated (NCAA team-half tips: 12 won from 24 against 14.7 expected).
 H1_SD_TEAM = {"nba": 0.72, "ncaam": 0.68, "wnba": 0.67}
+# The spread at pricing time, on top of the calibrated one. NCAA lines are
+# priced hours before the close the spread was calibrated on, and missed by
+# more than it allowed: on Betano's settled lines to 27 Nov 2026 the RMS miss
+# was 1/0.89 of the spread on first-half team totals (494 games), and the
+# best-scoring spread 1.10-1.15 of it on full games (~550). NBA's full games
+# fit (0.85-0.9); its first halves read 1.15 but on 25-76 games, so not yet.
+SD_WIDEN = {"ncaam": 1.10}
 H1_SHARE = {"nba": 0.505, "wnba": 0.50, "ncaam": 0.475, "ncaaw": 0.49, "euroleague": 0.50,
             "eurocup": 0.50, "acb": 0.484, "nbl": 0.511, "lba": 0.49}   # acb, nbl: measured, 2023-26
 
@@ -171,6 +178,7 @@ def price_event(st: State, share: float, game: dict, swapped: bool, odds: list[d
             ratio = (H1_SD_TEAM.get(st.league, 0.75) if k else H1_SD.get(st.league, 0.70))
             mu_model, s = mu_model * share, s * ratio
             mu_ref = mu_ref * share if mu_ref is not None else None
+        s *= SD_WIDEN.get(st.league, 1.0)
         no_vig = [(ln, (1 / pr["over"]) / (1 / pr["over"] + 1 / pr["under"]))
                   for ln, pr in ladder.items() if "over" in pr and "under" in pr]
         mu_book = implied_centre(no_vig, s)

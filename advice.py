@@ -39,10 +39,14 @@ EDGE = 0.06
 MIN_ODDS, MAX_ODDS = 1.40, 3.50
 BLEND = 0.75
 PERIODS = ["ft", "h1"]
-# Full-game overs are not tipped (from 26 Nov 2026): 1 won of 6 on the totals in
-# the first 127 tips, the final totals landing 2 points under the line. Revisit
-# with more settled tips.
-NO_FT_OVERS = True
+# No full-game tips in these leagues (from 27 Nov 2026). For the NCAA, DraftKings'
+# line is no sharper than Betano's - over 204 full games its close missed the
+# total by 13.45 points on average, Betano's own centre by 13.40 - and the model
+# scored worse than Betano's no-vig chances on its full-game lines (~550 games),
+# so an NCAA full-game "edge" is noise. Its full-game tips: 4 won of 13.
+# NBA full games are where the model does beat Betano (64-86 games), so their
+# overs are back (off 26 Nov 2026 on 1 won of 6).
+NO_FT_LEAGUES = ["ncaam"]
 # Only where the centre is a sharp line - DraftKings' (ESPN), or for the EuroLeague
 # Pinnacle's or the European books' median (The Odds API). Lines centred on the
 # bookmaker's own ladder are priced and settled (the admin page) but not tipped.
@@ -106,7 +110,7 @@ def main():
             events[(bk, ev)] = (kickoff, league, t1, t2)
             if not (MIN_ODDS <= price <= MAX_ODDS):
                 continue
-            if NO_FT_OVERS and period == "ft" and side == "over":
+            if period == "ft" and game.split(":")[0] in NO_FT_LEAGUES:
                 continue
             p = BLEND * p_raw + (1 - BLEND) * p_book
             edge = p * price - 1
